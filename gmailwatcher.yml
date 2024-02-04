@@ -1,0 +1,10 @@
+version: 1.0
+provider:
+  name: openfaas
+  gateway: http://redpi.local:8080
+functions:
+  gmailwatcher:
+    lang: golang-middleware
+    handler: ./gmailwatcher
+    image: gmailwatcher:latest
+
