@@ -1,0 +1,1 @@
+OpenFAAS Golang function which sets a watch on the authorised Gmail Inbox. This sets a GCP pub/sub topic which will receive a notification whenever a new email is received in the Gmail account. The topic has an HTTP call set to call whenever an event is published on the topic. See gmailreader for details.
