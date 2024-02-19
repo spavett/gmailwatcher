@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -15,14 +16,15 @@ import (
 )
 
 func Handle(w http.ResponseWriter, r *http.Request) {
+
 	ctx := context.Background()
-	b, err := os.ReadFile("credentials.json")
+	appCreds, err := readSecret("wordleboard-client-id")
 	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
+		log.Fatalf("Unable to read client secret: %v", err)
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
-	config, err := google.ConfigFromJSON(b, gmail.GmailReadonlyScope)
+	config, err := google.ConfigFromJSON([]byte(appCreds), gmail.GmailReadonlyScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
@@ -34,9 +36,13 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := "me"
+	pubsubTopic, err := readSecret("wordleboard-pubsub-topic")
+	if err != nil {
+		log.Fatalf("Unable to read pubsub topic: %v", err)
+	}
 	watch, err := srv.Users.Watch(user, &gmail.WatchRequest{
 		LabelIds:  []string{"INBOX"},
-		TopicName: "projects/wordleboard-1705220199954/topics/wordle-mail-notifications",
+		TopicName: pubsubTopic,
 	}).Do()
 	if err != nil {
 		log.Fatalf("Unable to watch: %v", err)
@@ -46,25 +52,29 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 
 // Retrieve a token, saves the token, then returns the generated client.
 func getClient(config *oauth2.Config) *http.Client {
-	// The file token.json stores the user's access and refresh tokens, and is
-	// created automatically when the authorization flow completes for the first
-	// time.
-	tokFile := "token.json"
-	tok, err := tokenFromFile(tokFile)
+	tok, err := tokenFromSecret("wordleboard-token")
 	if err != nil {
-		log.Fatalf("Unable to retrieve token from file: %v", err)
+		log.Fatalf("Unable to retrieve token from secret: %v", err)
 	}
 	return config.Client(context.Background(), tok)
 }
 
-// Retrieves a token from a local file.
-func tokenFromFile(file string) (*oauth2.Token, error) {
-	f, err := os.Open(file)
+func tokenFromSecret(name string) (*oauth2.Token, error) {
+	data, err := readSecret(name)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 	tok := &oauth2.Token{}
-	err = json.NewDecoder(f).Decode(tok)
+	err = json.Unmarshal([]byte(data), tok)
 	return tok, err
+}
+
+// readSecret reads a file from /var/lib/faasd-provider/secrets/<name> or
+// returns an error
+func readSecret(name string) (string, error) {
+	data, err := os.ReadFile("/var/lib/faasd-provider/secrets/" + name)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(data)), nil
 }

@@ -6,5 +6,11 @@ functions:
   gmailwatcher:
     lang: golang-middleware
     handler: ./gmailwatcher
-    image: gmailwatcher:latest
-
+    image: ghcr.io/spavett/gmailwatcher:latest
+    secrets:
+      - wordleboard-client-id
+      - wordleboard-pubsub-topic
+      - wordleboard-token
+    annotations:
+      topic: cron-function
+      schedule: "0 12 * * *"

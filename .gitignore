@@ -1,3 +1,5 @@
 template
 build
 .secrets
+go.work
+go.work.sum
