@@ -19,7 +19,6 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	appCreds, err := readSecret("wordleboard-client-id")
 	if err != nil {
-		//log.Fatalf("Unable to read client secret: %v", err)
 		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
 		return
 	}
@@ -27,21 +26,18 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// If modifying these scopes, delete your previously saved token.json.
 	config, err := google.ConfigFromJSON([]byte(appCreds), gmail.GmailReadonlyScope)
 	if err != nil {
-		//log.Fatalf("Unable to parse client secret file to config: %v", err)
 		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
 		return
 	}
 
 	client, err := getClient(config)
 	if err != nil {
-		//log.Fatalf("Unable to get client: %v", err)
 		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
 		return
 	}
 
 	srv, err := gmail.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		//log.Fatalf("Unable to retrieve Gmail client: %v", err)
 		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
 		return
 	}
@@ -49,7 +45,6 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	user := "me"
 	pubsubTopic, err := readSecret("wordleboard-pubsub-topic")
 	if err != nil {
-		//log.Fatalf("Unable to read pubsub topic: %v", err)
 		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
 		return
 	}
@@ -58,7 +53,6 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		TopicName: pubsubTopic,
 	}).Do()
 	if err != nil {
-		//log.Fatalf("Unable to watch: %v", err)
 		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
 		return
 	}
@@ -70,7 +64,6 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 func getClient(config *oauth2.Config) (*http.Client, error) {
 	tok, err := tokenFromSecret("wordleboard-token")
 	if err != nil {
-		//log.Fatalf("Unable to retrieve token from secret: %v", err)
 		return nil, err
 	}
 	return config.Client(context.Background(), tok), err
@@ -89,7 +82,7 @@ func tokenFromSecret(name string) (*oauth2.Token, error) {
 // readSecret reads a file from /var/lib/faasd-provider/secrets/<name> or
 // returns an error
 func readSecret(name string) (string, error) {
-	data, err := os.ReadFile("/var/lib/faasd-provider/secrets/" + name)
+	data, err := os.ReadFile("/var/openfaas/secrets/" + name)
 	if err != nil {
 		return "", err
 	}
