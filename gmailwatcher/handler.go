@@ -23,7 +23,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If modifying these scopes, delete your previously saved token.json.
+	// If modifying these scopes, update your previously generated token secret with gmailauth util.
 	config, err := google.ConfigFromJSON([]byte(appCreds), gmail.GmailReadonlyScope)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
@@ -60,7 +60,6 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprintf("Watch: %v\n", watch)))
 }
 
-// Retrieve a token, saves the token, then returns the generated client.
 func getClient(config *oauth2.Config) (*http.Client, error) {
 	tok, err := tokenFromSecret("wordleboard-token")
 	if err != nil {
@@ -79,8 +78,6 @@ func tokenFromSecret(name string) (*oauth2.Token, error) {
 	return tok, err
 }
 
-// readSecret reads a file from /var/lib/faasd-provider/secrets/<name> or
-// returns an error
 func readSecret(name string) (string, error) {
 	data, err := os.ReadFile("/var/openfaas/secrets/" + name)
 	if err != nil {
