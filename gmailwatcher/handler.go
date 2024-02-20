@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -20,43 +19,61 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	appCreds, err := readSecret("wordleboard-client-id")
 	if err != nil {
-		log.Fatalf("Unable to read client secret: %v", err)
+		//log.Fatalf("Unable to read client secret: %v", err)
+		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
+		return
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
 	config, err := google.ConfigFromJSON([]byte(appCreds), gmail.GmailReadonlyScope)
 	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
+		//log.Fatalf("Unable to parse client secret file to config: %v", err)
+		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
+		return
 	}
-	client := getClient(config)
+
+	client, err := getClient(config)
+	if err != nil {
+		//log.Fatalf("Unable to get client: %v", err)
+		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
+		return
+	}
 
 	srv, err := gmail.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		log.Fatalf("Unable to retrieve Gmail client: %v", err)
+		//log.Fatalf("Unable to retrieve Gmail client: %v", err)
+		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
+		return
 	}
 
 	user := "me"
 	pubsubTopic, err := readSecret("wordleboard-pubsub-topic")
 	if err != nil {
-		log.Fatalf("Unable to read pubsub topic: %v", err)
+		//log.Fatalf("Unable to read pubsub topic: %v", err)
+		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
+		return
 	}
 	watch, err := srv.Users.Watch(user, &gmail.WatchRequest{
 		LabelIds:  []string{"INBOX"},
 		TopicName: pubsubTopic,
 	}).Do()
 	if err != nil {
-		log.Fatalf("Unable to watch: %v", err)
+		//log.Fatalf("Unable to watch: %v", err)
+		http.Error(w, fmt.Sprintf("Error: %s", err), http.StatusInternalServerError)
+		return
 	}
-	fmt.Printf("Watch: %v\n", watch)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Watch: %v\n", watch)))
 }
 
 // Retrieve a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config) *http.Client {
+func getClient(config *oauth2.Config) (*http.Client, error) {
 	tok, err := tokenFromSecret("wordleboard-token")
 	if err != nil {
-		log.Fatalf("Unable to retrieve token from secret: %v", err)
+		//log.Fatalf("Unable to retrieve token from secret: %v", err)
+		return nil, err
 	}
-	return config.Client(context.Background(), tok)
+	return config.Client(context.Background(), tok), err
 }
 
 func tokenFromSecret(name string) (*oauth2.Token, error) {
